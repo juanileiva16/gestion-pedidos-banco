@@ -1,4 +1,10 @@
-type TipoVianda = "C" | "V" | "L";
+"use client";
+
+import { useEffect, useRef, useState } from "react";
+
+const tiposVianda = ["C", "V", "L"] as const;
+type TipoVianda = (typeof tiposVianda)[number];
+type CantidadesEntrega = Record<TipoVianda, number>;
 
 type DetalleVianda = {
   tipo: TipoVianda;
@@ -57,8 +63,75 @@ function resumirPedido(pedido: Pedido) {
   return { pedidas, entregadas, pendientes, estado };
 }
 
+function validarEntrega(pedido: Pedido, cantidades: CantidadesEntrega) {
+  for (const tipo of tiposVianda) {
+    const cantidad = cantidades[tipo];
+    const vianda = pedido.viandas.find((detalle) => detalle.tipo === tipo);
+    const pendientes = vianda ? vianda.pedidas - vianda.entregadas : 0;
+
+    if (!Number.isSafeInteger(cantidad) || cantidad < 0) {
+      return `La cantidad de ${tipo} debe ser un numero entero igual o mayor a cero.`;
+    }
+    if (cantidad > pendientes) {
+      return `Solo quedan ${pendientes} viandas de tipo ${tipo} pendientes.`;
+    }
+  }
+
+  if (tiposVianda.every((tipo) => cantidades[tipo] === 0)) {
+    return "Indica al menos una vianda para registrar la entrega.";
+  }
+
+  return null;
+}
+
+function registrarEntrega(pedido: Pedido, cantidades: CantidadesEntrega) {
+  // Se valida sobre el pedido actual, incluso si hubo otra actualizacion.
+  if (validarEntrega(pedido, cantidades)) return pedido;
+
+  return {
+    ...pedido,
+    viandas: pedido.viandas.map((vianda) => ({
+      ...vianda,
+      entregadas: vianda.entregadas + cantidades[vianda.tipo],
+    })),
+  };
+}
+
+function completarEntrega(pedido: Pedido) {
+  return {
+    ...pedido,
+    viandas: pedido.viandas.map((vianda) => ({
+      ...vianda,
+      entregadas: vianda.pedidas,
+    })),
+  };
+}
+
 export default function Home() {
-  const pedidos = pedidosIniciales.map((pedido) => ({
+  const [datosPedidos, setPedidos] = useState(pedidosIniciales);
+  const [pedidoEnEdicion, setPedidoEnEdicion] = useState<number | null>(null);
+  const [cantidades, setCantidades] = useState<Record<TipoVianda, string>>({
+    C: "0",
+    V: "0",
+    L: "0",
+  });
+  const [error, setError] = useState<string | null>(null);
+  const [aviso, setAviso] = useState("");
+  const dialogoRef = useRef<HTMLDialogElement>(null);
+  const tituloRef = useRef<HTMLHeadingElement>(null);
+  const pedidoSeleccionado = datosPedidos.find(
+    (pedido) => pedido.id === pedidoEnEdicion,
+  );
+
+  useEffect(() => {
+    if (pedidoEnEdicion !== null) {
+      dialogoRef.current?.showModal();
+    } else {
+      dialogoRef.current?.close();
+    }
+  }, [pedidoEnEdicion]);
+
+  const pedidos = datosPedidos.map((pedido) => ({
     ...pedido,
     resumen: resumirPedido(pedido),
   }));
@@ -71,6 +144,53 @@ export default function Home() {
     0,
   );
   const viandasPendientes = totalViandas - viandasEntregadas;
+
+  function entregarTodo(id: number) {
+    const pedido = datosPedidos.find((actual) => actual.id === id);
+    if (!pedido || resumirPedido(pedido).pendientes === 0) return;
+
+    setPedidos((actuales) =>
+      actuales.map((actual) =>
+        actual.id === id ? completarEntrega(actual) : actual,
+      ),
+    );
+    setAviso(`Entrega completada para ${pedido.nombre}.`);
+    tituloRef.current?.focus({ preventScroll: true });
+  }
+
+  function abrirEntregaParcial(id: number) {
+    setCantidades({ C: "0", V: "0", L: "0" });
+    setError(null);
+    setPedidoEnEdicion(id);
+  }
+
+  function confirmarEntregaParcial() {
+    if (!pedidoSeleccionado) return;
+
+    const entrega = {
+      C: Number(cantidades.C),
+      V: Number(cantidades.V),
+      L: Number(cantidades.L),
+    };
+    const mensajeError = validarEntrega(pedidoSeleccionado, entrega);
+    if (mensajeError) {
+      setError(mensajeError);
+      return;
+    }
+
+    setPedidos((actuales) =>
+      actuales.map((pedido) =>
+        pedido.id === pedidoSeleccionado.id
+          ? registrarEntrega(pedido, entrega)
+          : pedido,
+      ),
+    );
+    setAviso(`Entrega de ${entrega.C + entrega.V + entrega.L} viandas registrada para ${pedidoSeleccionado.nombre}.`);
+    dialogoRef.current?.close();
+    if (resumirPedido(registrarEntrega(pedidoSeleccionado, entrega)).pendientes === 0) {
+      tituloRef.current?.focus({ preventScroll: true });
+    }
+  }
 
   return (
     <main className="min-h-screen bg-zinc-100 px-4 py-8 text-zinc-950 sm:px-6 lg:px-8">
@@ -103,7 +223,14 @@ export default function Home() {
 
         <section aria-labelledby="pedidos-titulo">
           <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-zinc-300 py-3">
-            <h2 id="pedidos-titulo" className="text-lg font-semibold">Pedidos del dia</h2>
+            <h2
+              id="pedidos-titulo"
+              ref={tituloRef}
+              tabIndex={-1}
+              className="text-lg font-semibold focus-visible:outline-2 focus-visible:outline-emerald-700"
+            >
+              Pedidos del dia
+            </h2>
             <p className="text-sm text-zinc-600">{pedidos.length} pedidos</p>
           </div>
 
@@ -113,18 +240,19 @@ export default function Home() {
             tabIndex={0}
             className="overflow-x-auto focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-700"
           >
-            <table className="w-full min-w-[640px] table-fixed border-collapse text-left text-sm">
+            <table className="w-full min-w-[820px] table-fixed border-collapse text-left text-sm">
               <caption className="sr-only">
                 Cantidades pedidas, entregadas y pendientes por persona y tipo de vianda.
               </caption>
               <thead className="bg-zinc-200 text-zinc-900">
                 <tr>
-                  <th scope="col" className="w-[28%] px-4 py-3 font-semibold">Nombre</th>
-                  <th scope="col" className="w-[10%] px-2 py-3 text-center font-semibold">Tipo</th>
-                  <th scope="col" className="w-[14%] px-2 py-3 text-center font-semibold">Pedidas</th>
-                  <th scope="col" className="w-[16%] px-2 py-3 text-center font-semibold">Entregadas</th>
-                  <th scope="col" className="w-[16%] px-2 py-3 text-center font-semibold">Pendientes</th>
-                  <th scope="col" className="w-[16%] px-2 py-3 text-center font-semibold">Estado</th>
+                  <th scope="col" className="w-[22%] px-4 py-3 font-semibold">Nombre</th>
+                  <th scope="col" className="w-[7%] px-2 py-3 text-center font-semibold">Tipo</th>
+                  <th scope="col" className="w-[11%] px-2 py-3 text-center font-semibold">Pedidas</th>
+                  <th scope="col" className="w-[13%] px-2 py-3 text-center font-semibold">Entregadas</th>
+                  <th scope="col" className="w-[13%] px-2 py-3 text-center font-semibold">Pendientes</th>
+                  <th scope="col" className="w-[13%] px-2 py-3 text-center font-semibold">Estado</th>
+                  <th scope="col" className="w-[21%] px-3 py-3 text-center font-semibold">Acciones</th>
                 </tr>
               </thead>
 
@@ -166,13 +294,122 @@ export default function Home() {
                           {pedido.resumen.estado}
                         </td>
                       )}
+                      {indice === 0 && (
+                        <td rowSpan={pedido.viandas.length} className="px-3 py-3 align-top">
+                          <div className="flex flex-col gap-2">
+                            <button
+                              type="button"
+                              onClick={() => entregarTodo(pedido.id)}
+                              disabled={pedido.resumen.pendientes === 0}
+                              aria-label={`Entregar todo a ${pedido.nombre}`}
+                              className="min-h-10 rounded bg-emerald-700 px-3 py-2 font-medium text-white hover:bg-emerald-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-700 disabled:cursor-not-allowed disabled:bg-zinc-200 disabled:text-zinc-500"
+                            >
+                              Entregar todo
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => abrirEntregaParcial(pedido.id)}
+                              disabled={pedido.resumen.pendientes === 0}
+                              aria-label={`Entrega parcial de ${pedido.nombre}`}
+                              aria-haspopup="dialog"
+                              className="min-h-10 rounded border border-zinc-400 bg-white px-3 py-2 font-medium hover:bg-zinc-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-700 disabled:cursor-not-allowed disabled:border-zinc-200 disabled:bg-zinc-100 disabled:text-zinc-500"
+                            >
+                              Entrega parcial
+                            </button>
+                          </div>
+                        </td>
+                      )}
                     </tr>
                   ))}
                 </tbody>
               ))}
             </table>
           </div>
+          <p role="status" className="min-h-10 pt-3 text-sm text-emerald-800">
+            {aviso}
+          </p>
         </section>
+
+        <dialog
+          ref={dialogoRef}
+          onClose={() => setPedidoEnEdicion(null)}
+          aria-labelledby="entrega-titulo"
+          aria-describedby="entrega-persona"
+          className="fixed inset-0 m-auto max-h-[90dvh] w-[calc(100%_-_2rem)] max-w-md overflow-y-auto rounded-lg border border-zinc-300 bg-white p-5 text-zinc-950 shadow-xl backdrop:bg-black/40"
+        >
+          {pedidoSeleccionado && (
+            <form
+              noValidate
+              onSubmit={(event) => {
+                event.preventDefault();
+                const hayNumeroInvalido = Array.from(event.currentTarget.elements).some(
+                  (elemento) =>
+                    elemento instanceof HTMLInputElement && elemento.validity.badInput,
+                );
+                if (hayNumeroInvalido) {
+                  setError("Ingresa cantidades numericas validas.");
+                  return;
+                }
+                confirmarEntregaParcial();
+              }}
+            >
+              <h2 id="entrega-titulo" className="text-xl font-semibold">Entrega parcial</h2>
+              <p id="entrega-persona" className="mt-1 break-words text-sm text-zinc-600">
+                {pedidoSeleccionado.nombre}
+              </p>
+              <fieldset className="mt-5 space-y-3">
+                <legend className="mb-3 font-medium">Cantidades a entregar ahora</legend>
+                {pedidoSeleccionado.viandas.map((vianda) => {
+                  const pendientes = vianda.pedidas - vianda.entregadas;
+                  return (
+                    <div key={vianda.tipo} className="flex items-center justify-between gap-4">
+                      <div>
+                        <label htmlFor={`cantidad-${vianda.tipo}`} className="font-medium">
+                          Tipo {vianda.tipo}
+                        </label>
+                        <p id={`saldo-${vianda.tipo}`} className="text-sm text-zinc-600">
+                          Pendientes: {pendientes}
+                        </p>
+                      </div>
+                      <input
+                        id={`cantidad-${vianda.tipo}`}
+                        type="number"
+                        min={0}
+                        max={pendientes}
+                        step={1}
+                        disabled={pendientes === 0}
+                        value={cantidades[vianda.tipo]}
+                        aria-describedby={`saldo-${vianda.tipo}`}
+                        onChange={(event) => {
+                          const valor = event.target.value;
+                          setCantidades((actuales) => ({ ...actuales, [vianda.tipo]: valor }));
+                          setError(null);
+                        }}
+                        className="h-11 w-24 shrink-0 rounded border border-zinc-400 px-3 tabular-nums focus-visible:outline-2 focus-visible:outline-emerald-700 disabled:bg-zinc-100 disabled:text-zinc-500"
+                      />
+                    </div>
+                  );
+                })}
+              </fieldset>
+              {error && <p role="alert" className="mt-4 text-sm text-red-700">{error}</p>}
+              <div className="mt-6 flex flex-wrap justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => dialogoRef.current?.close()}
+                  className="min-h-11 rounded border border-zinc-400 px-4 py-2 font-medium hover:bg-zinc-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-700"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="min-h-11 rounded bg-emerald-700 px-4 py-2 font-medium text-white hover:bg-emerald-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-700"
+                >
+                  Registrar entrega
+                </button>
+              </div>
+            </form>
+          )}
+        </dialog>
       </div>
     </main>
   );
