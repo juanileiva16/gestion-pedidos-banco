@@ -40,6 +40,26 @@ npm.cmd run dev
 Abrir la URL que indique la terminal, normalmente http://localhost:3000.
 Para revisar el código antes de un commit: `npm.cmd run lint` y `npm.cmd run build`.
 
+### Variables para Supabase
+
+La plantilla `.env.example` documenta las variables necesarias sin credenciales
+reales. En la raíz, completar `.env.local` con la URL del proyecto y su clave
+publicable, disponibles en el panel Connect de Supabase:
+
+```dotenv
+NEXT_PUBLIC_SUPABASE_URL=https://TU-PROYECTO.supabase.co
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=TU_CLAVE_PUBLICABLE
+```
+
+Si falta `.env.local`, se puede crear a partir de `.env.example`.
+Git excluye `.env.local`; solo la plantilla se versiona. No usar una clave secreta,
+`service_role` ni la contraseña de PostgreSQL en estas variables públicas.
+Reiniciar el servidor local después de cambiarlas. En Vercel se configurarán
+por separado: el archivo local no se sube al deploy.
+
+Esta preparación todavía no conecta la pantalla con Supabase: faltan el cliente,
+la autenticación y las tablas con sus permisos. La demo sigue usando datos en memoria.
+
 ## Pedidos por fecha
 
 La pantalla administrativa permite seleccionar una fecha de entrega, consultar
