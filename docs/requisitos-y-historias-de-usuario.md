@@ -53,7 +53,7 @@ en la primera versión; WhatsApp continuará como canal de contacto externo.
 | RN-01 | Un empleado puede tener un pedido activo por fecha de entrega, con cantidades de varios tipos de vianda. No debe duplicarse el pedido por volver a confirmar. |
 | RN-02 | Las cantidades son enteros no negativos. Para confirmar un pedido, la suma debe ser mayor que cero. Por ahora no hay un límite comercial de unidades. |
 | RN-03 | Un empleado puede pedir para compañeros dentro de su propio pedido. En esta versión no se identificará a cada destinatario de las unidades. |
-| RN-04 | El pedido identifica al empleado mediante su usuario, no mediante el texto de su nombre. Cada pedido tiene un identificador único y una fecha de entrega. |
+| RN-04 | El pedido identifica al empleado mediante un identificador interno, no mediante el texto de su nombre. El empleado tiene un legajo único y puede vincularse a una cuenta de acceso. Cada pedido tiene un identificador único y una fecha de entrega. |
 | RN-05 | La fecha de entrega es el día para el que se pide, no la fecha de creación. Se guarda sin hora en formato `AAAA-MM-DD` y se muestra en `DD-MM-AAAA`. |
 | RN-06 | Se puede pedir, modificar o cancelar hasta el día anterior a la entrega. No se replica la restricción del sistema actual de pedir hasta el jueves para la semana siguiente. |
 | RN-07 | El horario exacto de cierre está pendiente de confirmación. La propuesta provisional es cerrar a las 00:00 del día de entrega, usando `America/Argentina/Buenos_Aires`. |
@@ -68,6 +68,8 @@ en la primera versión; WhatsApp continuará como canal de contacto externo.
 | RN-16 | Los pedidos cancelados no se contabilizan en las cantidades activas ni en el resumen de preparación para el restaurante. |
 | RN-17 | La confirmación de un pedido o entrega se muestra únicamente cuando el servidor guardó la operación correctamente. Si falla, se informa el error y no se presenta como guardada. |
 | RN-18 | Los permisos se comprueban en el servidor: el empleado accede a sus propios pedidos y el administrador accede a las operaciones administrativas. |
+| RN-19 | El acceso utiliza el correo laboral. El legajo se guarda como texto para conservar posibles ceros iniciales y no funciona como contraseña ni como prueba de identidad. |
+| RN-20 | Provisionalmente, un administrador habilita al empleado y vincula su legajo con su correo laboral. No habrá registro público libre ni asignación de roles desde el navegador. |
 
 ### Ejemplo de una entrega parcial
 
@@ -93,7 +95,10 @@ Light pendiente: las comunes no se vuelven a contar.
 - Un empleado puede consultar y gestionar sus propios pedidos; no los de otro empleado.
 - Solo un administrador puede publicar menús, consultar la lista general y registrar entregas.
 - Los permisos se verifican también al solicitar la operación al servidor.
-- El mecanismo para habilitar cuentas queda pendiente de decisión; la propuesta es usar invitaciones.
+- El usuario inicia sesión con su correo laboral y debe demostrar que controla ese correo mediante el mecanismo de autenticación que se configure.
+- Provisionalmente, el administrador habilita la cuenta del empleado mediante una invitación; conocer un legajo no permite activar una cuenta.
+- No se habilitan dos empleados con el mismo legajo ni se vincula una cuenta a dos empleados.
+- Una cuenta deshabilitada no puede operar aunque conserve una sesión anterior; el servidor comprueba su habilitación.
 
 ### HU-02. Publicación de menús por fecha
 
@@ -116,8 +121,8 @@ Light pendiente: las comunes no se vuelven a contar.
 
 - Puedo combinar opciones, por ejemplo dos comunes y una Light.
 - Se aplican las reglas de cantidades y cierre RN-02, RN-06, RN-07 y RN-08.
-- El pedido queda asociado a mi usuario y a la fecha seleccionada.
-- No se crean dos pedidos activos para el mismo usuario y fecha por repetir la confirmación.
+- El pedido queda asociado a mi empleado vinculado a la cuenta y a la fecha seleccionada.
+- No se crean dos pedidos activos para el mismo empleado y fecha por repetir la confirmación.
 - Después de guardar, veo el identificador, la fecha y las cantidades confirmadas.
 - Si el guardado falla, recibo un error y no una confirmación de éxito.
 
@@ -256,8 +261,10 @@ No se mostrará una confirmación de guardado si la operación falló.
 | Tema | Estado actual | Qué falta confirmar |
 | --- | --- | --- |
 | Límite de viandas | Sin límite comercial por ahora. | Si el restaurante necesita un máximo por empleado o fecha. |
-| Hora de cierre | Se acordó hasta el día anterior; 00:00 del día de entrega es una propuesta provisional. | La hora que permite preparar los pedidos y su aplicación en días no laborables. |
-| Alta de empleados | Invitaciones recomendadas, todavía no elegidas. | Quién habilita cuentas y si se permite registro por cuenta propia. |
+| Hora de cierre | Provisionalmente, 00:00 del día de entrega en Argentina; se guarda un cierre configurable por fecha. | El cierre operativo del restaurante, que puede ser anterior, y su aplicación en días no laborables. |
+| Alta de empleados | Provisionalmente, habilitación e invitación por un administrador; sin registro público libre. | Quién autoriza las altas y cómo se verifica el listado oficial de legajos. |
+| Identificación | Legajo único como texto y un identificador interno estable. | Formato y listado de legajos válidos. No se inventará una validación oficial. |
+| Acceso | Correo laboral elegido; verificación del control del correo. | Dominio autorizado, mecanismo de inicio de sesión y entrega de correos al banco. |
 | Comunicación de cantidades | Se supone que el restaurante recibe un reporte o consulta totales. | Cómo funciona hoy y qué canal usará nuestro sistema. |
 | Usuario restaurante | Fuera de la primera versión. | Si participará directamente y qué información podrá consultar. |
 | Cambios después del cierre | No habilitados en el alcance inicial. | Procedimiento y confirmación del restaurante para una excepción. |
@@ -275,6 +282,9 @@ No se mostrará una confirmación de guardado si la operación falló.
 6. Implementar pedidos de empleados y carga administrativa, con confirmación de guardado y cierre.
 7. Probar el circuito completo con cuentas y datos ficticios antes de incorporar datos reales.
 8. Incorporar incidencias y reclamos en una segunda etapa.
+
+El diseño inicial para el paso 2 está en [Modelo de datos](modelo-de-datos.md).
+Es una propuesta documentada; todavía no se crearon tablas ni cuentas reales.
 
 ### Verificación del primer circuito completo
 

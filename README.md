@@ -25,6 +25,11 @@ criterios de aceptación están en
 El documento distingue la demo actual, la primera versión y las ampliaciones
 posteriores, e identifica las decisiones que todavía deben confirmarse.
 
+El [Modelo de datos inicial](docs/modelo-de-datos.md) propone las tablas,
+relaciones y controles para incorporar persistencia y acceso con correo laboral.
+Incluye los supuestos provisionales de habilitación y cierre; todavía no hay
+una base de datos configurada.
+
 ## Desarrollo local
 
 ```powershell
