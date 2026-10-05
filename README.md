@@ -11,10 +11,19 @@ Reemplazar la lista física de pedidos por una pantalla donde se pueda:
 - Marcar cada pedido como entregado
 - Ver cuántos pedidos quedan pendientes
 
-## Primera versión
+## Estado actual
 
-La primera versión trabajará con datos cargados manualmente dentro del proyecto.
-Más adelante se podrá agregar carga desde Excel, CSV o imágenes.
+La demo actual trabaja con datos ficticios cargados dentro del proyecto.
+La primera versión prevista incorporará usuarios, permisos y base de datos.
+La importación desde Excel, CSV o imágenes queda para una ampliación posterior.
+
+## Requisitos del producto
+
+El alcance previsto, las reglas de negocio, las historias de usuario y sus
+criterios de aceptación están en
+[Requisitos e historias de usuario](docs/requisitos-y-historias-de-usuario.md).
+El documento distingue la demo actual, la primera versión y las ampliaciones
+posteriores, e identifica las decisiones que todavía deben confirmarse.
 
 ## Desarrollo local
 
