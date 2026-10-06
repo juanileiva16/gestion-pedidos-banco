@@ -4,6 +4,7 @@ import { useState } from "react";
 import DatePicker from "react-datepicker";
 import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
+import { CalendarDays } from "lucide-react";
 import { FORMATO_FECHA, formatearFecha, leerFecha } from "../lib/fechas";
 
 type SelectorFechaProps = {
@@ -49,6 +50,7 @@ export default function SelectorFecha({ fecha, onChange }: SelectorFechaProps) {
           autoComplete="off"
           required
           showIcon
+          icon={<CalendarDays aria-hidden="true" />}
           toggleCalendarOnIconClick
           isClearable
           clearButtonTitle="Borrar fecha"
@@ -66,7 +68,7 @@ export default function SelectorFecha({ fecha, onChange }: SelectorFechaProps) {
           ariaDescribedBy={error ? "fecha-error" : undefined}
           wrapperClassName="w-full"
           popperClassName="calendario-entrega"
-          className="block min-h-11 w-full min-w-0 rounded border border-zinc-400 bg-white text-zinc-950 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-700"
+          className="block min-h-11 w-full min-w-0 border bg-white"
         />
       </div>
       {error && (

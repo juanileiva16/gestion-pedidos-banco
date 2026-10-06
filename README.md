@@ -60,6 +60,24 @@ por separado: el archivo local no se sube al deploy.
 Esta preparación todavía no conecta la pantalla con Supabase: faltan el cliente,
 la autenticación y las tablas con sus permisos. La demo sigue usando datos en memoria.
 
+## Diseño de gestión
+
+La pantalla actual usa una paleta azul y amarilla inspirada en la referencia
+visual del Banco de Corrientes, sin reproducir su logo ni afirmar que los colores
+sean oficiales. El tema es claro, independientemente del modo del dispositivo.
+
+La tabla se conserva en escritorio. En celular y tablet, cada pedido muestra sus
+cantidades y acciones en una vista compacta; ambas vistas usan el mismo estado
+y las mismas funciones de entrega. Las transiciones respetan la preferencia de
+movimiento reducido del sistema.
+
+- `app/page.tsx`: contenido, estado y acciones de la pantalla.
+- `app/page.module.css`: estilos específicos de gestión y adaptación a tamaños.
+- `app/globals.css`: colores compartidos, tipografía y calendario.
+
+La portada y una posible animación del pescado institucional quedan para una
+iteración posterior; todavía no se implementaron.
+
 ## Pedidos por fecha
 
 La pantalla administrativa permite seleccionar una fecha de entrega, consultar

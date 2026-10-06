@@ -1,8 +1,13 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import {
+  ArrowDownToLine, Check, CheckCheck, CircleCheck, ClipboardList,
+  Clock3, Inbox, PackageCheck, PieChart, Utensils, X,
+} from "lucide-react";
 import SelectorFecha from "./components/selector-fecha";
 import { formatearFecha } from "./lib/fechas";
+import styles from "./page.module.css";
 
 const tiposVianda = ["C", "V", "L"] as const;
 type TipoVianda = (typeof tiposVianda)[number];
@@ -130,6 +135,35 @@ function completarEntrega(pedido: Pedido) {
   };
 }
 
+function EstadoPedido({ estado }: { estado: string }) {
+  const Icono = estado === "Entregado" ? CircleCheck : estado === "Parcial" ? PieChart : Clock3;
+  return (
+    <span className={`${styles.estado} ${estado === "Entregado" ? styles.entregado : estado === "Parcial" ? styles.parcial : styles.pendiente}`}>
+      <Icono size={14} aria-hidden="true" />{estado}
+    </span>
+  );
+}
+
+function AccionesEntrega({ pedido, onTodo, onParcial }: {
+  pedido: Pedido;
+  onTodo: (id: number) => void;
+  onParcial: (id: number) => void;
+}) {
+  const completo = resumirPedido(pedido).pendientes === 0;
+  return (
+    <div className={styles.acciones}>
+      <button type="button" onClick={() => onTodo(pedido.id)} disabled={completo}
+        aria-label={`Entregar todo a ${pedido.nombre}`} className={styles.botonPrimario}>
+        <CheckCheck size={16} aria-hidden="true" />Entregar todo
+      </button>
+      <button type="button" onClick={() => onParcial(pedido.id)} disabled={completo}
+        aria-label={`Entrega parcial de ${pedido.nombre}`} aria-haspopup="dialog" className={styles.botonSecundario}>
+        <ArrowDownToLine size={16} aria-hidden="true" />Entrega parcial
+      </button>
+    </div>
+  );
+}
+
 export default function Home() {
   const [datosPedidos, setPedidos] = useState(pedidosIniciales);
   const [fechaSeleccionada, setFechaSeleccionada] = useState(fechaInicial);
@@ -238,44 +272,59 @@ export default function Home() {
   }
 
   return (
-    <main className="min-h-screen bg-zinc-100 px-4 py-8 text-zinc-950 sm:px-6 lg:px-8">
-      <div className="mx-auto flex max-w-5xl flex-col gap-6">
-        <header className="flex flex-col gap-5 border-b border-zinc-300 pb-5 sm:flex-row sm:items-end sm:justify-between">
+    <main className={styles.pagina}>
+      <a className={styles.saltar} href="#pedidos-del-dia">Ir a los pedidos</a>
+      <header className={styles.cabecera}>
+        <div className={styles.cabeceraInterior}>
+          <div className={styles.marca}>
+            <span className={styles.marcaIcono}><Utensils size={24} aria-hidden="true" /></span>
+            <div><strong>Viandas</strong><span>Banco de Corrientes</span></div>
+          </div>
+          <nav aria-label="Navegacion de gestion" className={styles.navegacion}>
+            <a href="#resumen"><PieChart size={16} aria-hidden="true" />Resumen</a>
+            <a href="#pedidos-del-dia"><ClipboardList size={16} aria-hidden="true" />Pedidos</a>
+          </nav>
+          <span className={styles.rol}>Administracion</span>
+        </div>
+      </header>
+      <div className={styles.contenido}>
+        <section className={styles.encabezado} aria-labelledby="gestion-titulo">
           <div>
-            <p className="text-sm font-medium uppercase text-emerald-700">Banco</p>
-            <h1 className="mt-2 text-3xl font-bold">Gestion de pedidos</h1>
+            <p className={styles.eyebrow}>ENTREGAS DIARIAS</p>
+            <h1 id="gestion-titulo">Gestion de pedidos</h1>
+            <p className={styles.subtitulo}>Viandas para el equipo del banco</p>
           </div>
           <SelectorFecha fecha={fechaSeleccionada} onChange={cambiarFecha} />
-        </header>
+        </section>
 
-        <section aria-label="Resumen de viandas">
-          <dl className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-            <div className="border-l-4 border-zinc-400 px-4 py-2">
-              <dt className="text-sm text-zinc-600">Viandas pedidas</dt>
-              <dd className="mt-1 text-3xl font-semibold tabular-nums">{totalViandas}</dd>
+        <section id="resumen" aria-label="Resumen de viandas" className={styles.resumen}>
+          <dl className={styles.indicadores}>
+            <div className={styles.indicador}>
+              <span className={`${styles.iconoIndicador} ${styles.iconoAzul}`}><Utensils size={20} aria-hidden="true" /></span>
+              <div><dt>Viandas pedidas</dt><dd>{totalViandas}</dd></div>
             </div>
-            <div className="border-l-4 border-emerald-600 px-4 py-2">
-              <dt className="text-sm text-emerald-800">Viandas entregadas</dt>
-              <dd className="mt-1 text-3xl font-semibold tabular-nums text-emerald-900">
-                {viandasEntregadas}
-              </dd>
+            <div className={styles.indicador}>
+              <span className={`${styles.iconoIndicador} ${styles.iconoVerde}`}><PackageCheck size={20} aria-hidden="true" /></span>
+              <div><dt>Viandas entregadas</dt><dd>{viandasEntregadas}</dd></div>
             </div>
-            <div className="border-l-4 border-amber-500 px-4 py-2">
-              <dt className="text-sm text-amber-800">Viandas pendientes</dt>
-              <dd className="mt-1 text-3xl font-semibold tabular-nums text-amber-900">
-                {viandasPendientes}
-              </dd>
+            <div className={styles.indicador}>
+              <span className={`${styles.iconoIndicador} ${styles.iconoAmarillo}`}><Clock3 size={20} aria-hidden="true" /></span>
+              <div><dt>Viandas pendientes</dt><dd>{viandasPendientes}</dd></div>
             </div>
           </dl>
+          <div className={styles.progreso}>
+            <div><span>Avance de entregas</span><strong>{totalViandas ? Math.round(viandasEntregadas / totalViandas * 100) : 0}%</strong></div>
+            <progress aria-label="Avance de entregas" max={totalViandas || 1} value={viandasEntregadas} />
+          </div>
         </section>
 
         <section id="pedidos-del-dia" aria-labelledby="pedidos-titulo">
-          <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-zinc-300 py-3">
+          <div className={styles.tituloLista}>
             <h2
               id="pedidos-titulo"
               ref={tituloRef}
               tabIndex={-1}
-              className="text-lg font-semibold focus-visible:outline-2 focus-visible:outline-emerald-700"
+              className={styles.tituloPedidos}
             >
               {fechaSeleccionada ? (
                 <>
@@ -288,30 +337,34 @@ export default function Home() {
                 "Pedidos"
               )}
             </h2>
-            <p aria-live="polite" className="text-sm text-zinc-600">
+            <p aria-live="polite" className={styles.cantidadPedidos}>
               {pedidos.length} {pedidos.length === 1 ? "pedido" : "pedidos"}
             </p>
           </div>
 
           {pedidos.length === 0 ? (
-            <p role="status" className="border-b border-zinc-300 py-10 text-center text-zinc-600">
+            <div className={styles.vacio}>
+              <Inbox size={32} aria-hidden="true" />
+              <p role="status">
               {fechaSeleccionada
                 ? `No hay pedidos para el ${formatearFecha(fechaSeleccionada)}.`
                 : "Fecha de entrega requerida."}
-            </p>
+              </p>
+            </div>
           ) : (
+            <>
             <div
               role="region"
               aria-label="Detalle de pedidos por tipo de vianda"
               tabIndex={0}
-              className="overflow-x-auto focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-700"
+              className={styles.tablaEscritorio}
             >
-              <table className="w-full min-w-[820px] table-fixed border-collapse text-left text-sm">
+              <table className={styles.tabla}>
                 <caption className="sr-only">
                   Cantidades pedidas, entregadas y pendientes por persona y tipo de vianda
                   para el {formatearFecha(fechaSeleccionada)}.
                 </caption>
-                <thead className="bg-zinc-200 text-zinc-900">
+                <thead>
                   <tr>
                     <th scope="col" className="w-[22%] px-4 py-3 font-semibold">Nombre</th>
                     <th scope="col" className="w-[7%] px-2 py-3 text-center font-semibold">Tipo</th>
@@ -326,27 +379,21 @@ export default function Home() {
                 {pedidos.map((pedido) => (
                   <tbody
                     key={pedido.id}
-                    className={
-                      pedido.resumen.estado === "Entregado"
-                        ? "border-b-2 border-zinc-300 bg-emerald-50"
-                        : pedido.resumen.estado === "Parcial"
-                          ? "border-b-2 border-zinc-300 bg-amber-50"
-                          : "border-b-2 border-zinc-300 bg-white"
-                    }
+                    className={styles.grupoPedido}
                   >
                     {pedido.viandas.map((vianda, indice) => (
-                      <tr key={vianda.tipo} className="border-b border-zinc-200">
+                      <tr key={vianda.tipo}>
                         {indice === 0 && (
                           <th
                             scope="rowgroup"
                             rowSpan={pedido.viandas.length}
                             className="break-words px-4 py-3 align-top font-medium"
                           >
-                            {pedido.nombre}
+                            <div className={styles.persona}><span className={styles.avatar} aria-hidden="true">{String(pedido.id).padStart(2, "0")}</span><span>{pedido.nombre}</span></div>
                           </th>
                         )}
                         <th scope="row" className="px-2 py-3 text-center font-medium">
-                          {vianda.tipo}
+                          <span className={styles.tipo}>{vianda.tipo}</span>
                         </th>
                         <td className="px-2 py-3 text-center tabular-nums">{vianda.pedidas}</td>
                         <td className="px-2 py-3 text-center tabular-nums">{vianda.entregadas}</td>
@@ -358,32 +405,12 @@ export default function Home() {
                             rowSpan={pedido.viandas.length}
                             className="px-2 py-3 text-center align-top font-medium"
                           >
-                            {pedido.resumen.estado}
+                            <EstadoPedido estado={pedido.resumen.estado} />
                           </td>
                         )}
                         {indice === 0 && (
                           <td rowSpan={pedido.viandas.length} className="px-3 py-3 align-top">
-                            <div className="flex flex-col gap-2">
-                              <button
-                                type="button"
-                                onClick={() => entregarTodo(pedido.id)}
-                                disabled={pedido.resumen.pendientes === 0}
-                                aria-label={`Entregar todo a ${pedido.nombre}`}
-                                className="min-h-10 rounded bg-emerald-700 px-3 py-2 font-medium text-white hover:bg-emerald-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-700 disabled:cursor-not-allowed disabled:bg-zinc-200 disabled:text-zinc-500"
-                              >
-                                Entregar todo
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => abrirEntregaParcial(pedido.id)}
-                                disabled={pedido.resumen.pendientes === 0}
-                                aria-label={`Entrega parcial de ${pedido.nombre}`}
-                                aria-haspopup="dialog"
-                                className="min-h-10 rounded border border-zinc-400 bg-white px-3 py-2 font-medium hover:bg-zinc-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-700 disabled:cursor-not-allowed disabled:border-zinc-200 disabled:bg-zinc-100 disabled:text-zinc-500"
-                              >
-                                Entrega parcial
-                              </button>
-                            </div>
+                            <AccionesEntrega pedido={pedido} onTodo={entregarTodo} onParcial={abrirEntregaParcial} />
                           </td>
                         )}
                       </tr>
@@ -392,18 +419,41 @@ export default function Home() {
                 ))}
               </table>
             </div>
+            <div className={styles.listaMovil}>
+              {pedidos.map((pedido) => (
+                <article key={pedido.id} className={styles.pedidoMovil} aria-label={pedido.nombre}>
+                  <header><h3>{pedido.nombre}</h3><EstadoPedido estado={pedido.resumen.estado} /></header>
+                  <table className={styles.tablaMovil}>
+                    <caption className="sr-only">Cantidades de {pedido.nombre}</caption>
+                    <thead><tr><th scope="col">Tipo</th><th scope="col">Pedidas</th><th scope="col">Entregadas</th><th scope="col">Pendientes</th></tr></thead>
+                    <tbody>{pedido.viandas.map((vianda) => (
+                      <tr key={vianda.tipo}><th scope="row"><span className={styles.tipo}>{vianda.tipo}</span></th>
+                        <td>{vianda.pedidas}</td><td>{vianda.entregadas}</td><td>{vianda.pedidas - vianda.entregadas}</td>
+                      </tr>
+                    ))}</tbody>
+                  </table>
+                  <AccionesEntrega pedido={pedido} onTodo={entregarTodo} onParcial={abrirEntregaParcial} />
+                </article>
+              ))}
+            </div>
+            </>
           )}
-          <p role="status" className="min-h-10 pt-3 text-sm text-emerald-800">
-            {aviso}
+          <p role="status" className={styles.aviso}>
+            {aviso && <><CircleCheck size={17} aria-hidden="true" />{aviso}</>}
           </p>
         </section>
+
+        <footer className={styles.pie}>
+          <span><span className={styles.puntoDemo} />Datos de prueba</span>
+          <span>Viandas &middot; Banco de Corrientes</span>
+        </footer>
 
         <dialog
           ref={dialogoRef}
           onClose={() => setPedidoEnEdicion(null)}
           aria-labelledby="entrega-titulo"
           aria-describedby="entrega-persona"
-          className="fixed inset-0 m-auto max-h-[90dvh] w-[calc(100%_-_2rem)] max-w-md overflow-y-auto rounded-lg border border-zinc-300 bg-white p-5 text-zinc-950 shadow-xl backdrop:bg-black/40"
+          className={styles.dialogo}
         >
           {pedidoSeleccionado && (
             <form
@@ -421,7 +471,10 @@ export default function Home() {
                 confirmarEntregaParcial();
               }}
             >
-              <h2 id="entrega-titulo" className="text-xl font-semibold">Entrega parcial</h2>
+              <div className={styles.dialogoTitulo}>
+                <h2 id="entrega-titulo">Entrega parcial</h2>
+                <button type="button" onClick={() => dialogoRef.current?.close()} className={styles.botonIcono} aria-label="Cerrar entrega parcial" title="Cerrar entrega parcial"><X size={20} aria-hidden="true" /></button>
+              </div>
               <p id="entrega-persona" className="mt-1 break-words text-sm text-zinc-600">
                 {pedidoSeleccionado.nombre} - {formatearFecha(pedidoSeleccionado.fechaEntrega)}
               </p>
@@ -453,7 +506,7 @@ export default function Home() {
                           setCantidades((actuales) => ({ ...actuales, [vianda.tipo]: valor }));
                           setError(null);
                         }}
-                        className="h-11 w-24 shrink-0 rounded border border-zinc-400 px-3 tabular-nums focus-visible:outline-2 focus-visible:outline-emerald-700 disabled:bg-zinc-100 disabled:text-zinc-500"
+                        className={styles.cantidadInput}
                       />
                     </div>
                   );
@@ -464,15 +517,15 @@ export default function Home() {
                 <button
                   type="button"
                   onClick={() => dialogoRef.current?.close()}
-                  className="min-h-11 rounded border border-zinc-400 px-4 py-2 font-medium hover:bg-zinc-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-700"
+                  className={styles.botonSecundario}
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  className="min-h-11 rounded bg-emerald-700 px-4 py-2 font-medium text-white hover:bg-emerald-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-700"
+                  className={styles.botonPrimario}
                 >
-                  Registrar entrega
+                  <Check size={17} aria-hidden="true" />Registrar entrega
                 </button>
               </div>
             </form>
